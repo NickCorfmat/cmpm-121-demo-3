@@ -69,7 +69,7 @@ updateInventoryPanel();
 
 function updateInventoryPanel(): void {
   const coinList = playerInventory
-    .map((coin) => `[${getCoinString(coin)}]`)
+    .map((coin) => getCoinString(coin))
     .join(", ");
   inventoryPanel.innerHTML = `${coinList || " "}`;
 }
@@ -94,6 +94,7 @@ function spawnCache(i: number, j: number): void {
   rect.bindPopup(() => createCachePopup(cache));
 }
 
+// Populate caches with a random amount of coins
 function generateCoinsForCache(i: number, j: number): Coin[] {
   const numCoins = Math.floor(luck([i, j, "coins"].toString()) * 8);
   const coins: Coin[] = [];
@@ -105,8 +106,9 @@ function generateCoinsForCache(i: number, j: number): Coin[] {
   return coins;
 }
 
+// Return coin-bracket formatted string
 function getCoinString(coin: Coin): string {
-  return `${coin.cell.i}:${coin.cell.j}#${coin.serial}`;
+  return `[${coin.cell.i}:${coin.cell.j}#${coin.serial}]`;
 }
 
 function createCachePopup(cache: Cache): HTMLDivElement {
@@ -129,9 +131,9 @@ function createCachePopup(cache: Cache): HTMLDivElement {
 function createCoinButton(cache: Cache, coin: Coin): HTMLDivElement {
   // create button for new coin
   const coinDiv = document.createElement("div");
-  coinDiv.innerHTML = `Coin: [${
+  coinDiv.innerHTML = `Coin: ${
     getCoinString(coin)
-  }]<button id="collect-${coin.serial}">Collect</button>`;
+  }<button id="collect-${coin.serial}">Collect</button>`;
 
   // Add event listener to the new collect button
   coinDiv
@@ -145,6 +147,7 @@ function createCoinButton(cache: Cache, coin: Coin): HTMLDivElement {
 }
 
 function appendCollectButtons(popupDiv: HTMLDivElement, cache: Cache): void {
+  // create a collect button for each coin in the cache
   cache.coins.forEach((coin) => {
     const coinDiv = createCoinButton(cache, coin);
     popupDiv.appendChild(coinDiv);
@@ -152,9 +155,11 @@ function appendCollectButtons(popupDiv: HTMLDivElement, cache: Cache): void {
 }
 
 function appendDepositButton(popupDiv: HTMLDivElement, cache: Cache): void {
+  // create deposit button
   const depositButton = document.createElement("button");
   depositButton.innerHTML = "Deposit Coin";
 
+  // Add event listener to the new deposit button
   depositButton.addEventListener("click", () => {
     depositCoin(cache, popupDiv);
     updateInventoryPanel();
