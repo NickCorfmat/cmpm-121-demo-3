@@ -18,6 +18,7 @@ const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
+const COORD_PRECISION = 5;
 
 // Create the map html element
 const map = leaflet.map(document.getElementById("map")!, {
@@ -31,12 +32,18 @@ const map = leaflet.map(document.getElementById("map")!, {
 
 const playerInventory: Coin[] = [];
 
+interface Cell {
+  i: number;
+  j: number;
+}
+
 interface Coin {
+  cell: Cell;
   serial: string;
 }
 
 interface Cache {
-  cell: leaflet.latLng;
+  coords: leaflet.latLng;
   coins: Coin[];
 }
 
@@ -60,6 +67,13 @@ const inventoryPanel = document.querySelector<HTMLDivElement>(
 )!;
 updateInventoryPanel();
 
+function updateInventoryPanel(): void {
+  const coinList = playerInventory
+    .map((coin) => `[${getCoinString(coin)}]`)
+    .join(", ");
+  inventoryPanel.innerHTML = `${coinList || " "}`;
+}
+
 // Add caches to the map by cell numbers
 function spawnCache(i: number, j: number): void {
   const origin = OAKES_CLASSROOM;
@@ -68,12 +82,9 @@ function spawnCache(i: number, j: number): void {
     [origin.lat + (i + 1) * TILE_DEGREES, origin.lng + (j + 1) * TILE_DEGREES],
   ]);
 
-  // generate random array of coins for this cache
-  const coins = generateCoinsForCache(i, j);
-
   const cache: Cache = {
-    cell: bounds.getCenter(),
-    coins: coins,
+    coords: bounds.getCenter(),
+    coins: generateCoinsForCache(i, j),
   };
 
   // Add a rectangle to the map to represent the cache
@@ -83,49 +94,59 @@ function spawnCache(i: number, j: number): void {
   rect.bindPopup(() => createCachePopup(cache));
 }
 
-function createCachePopup(cache: Cache): HTMLDivElement {
-  // create popup
-  const cachePopupDiv = document.createElement("div");
-  cachePopupDiv.innerHTML = `
-    <div>Cache at ${cache.cell.lat.toFixed(5)},${
-    cache.cell.lng.toFixed(
-      5,
-    )
-  } has ${cache.coins.length} coins.
-  `;
-
-  assignCollectButtons(cachePopupDiv, cache);
-  appendDepositButton(cachePopupDiv, cache);
-
-  return cachePopupDiv;
-}
-
-// --------------------- REWRITE ----------------------------
 function generateCoinsForCache(i: number, j: number): Coin[] {
-  const numCoins = Math.floor(luck([i, j, "coins"].toString()) * 10) + 1;
+  const numCoins = Math.floor(luck([i, j, "coins"].toString()) * 8);
   const coins: Coin[] = [];
 
   for (let n = 0; n < numCoins; n++) {
-    coins.push({ serial: `C-${i}-${j}-${n}` });
+    coins.push({ cell: { i: i, j: j }, serial: `${n}` });
   }
 
   return coins;
 }
 
-function assignCollectButtons(popupDiv: HTMLDivElement, cache: Cache): void {
-  cache.coins.forEach((coin, index) => {
-    const coinDiv = document.createElement("div");
-    coinDiv.innerHTML = `Coin ${
-      index + 1
-    } (Serial ${coin.serial})<button id="collect-${index}"    >    Collect</button>`;
+function getCoinString(coin: Coin): string {
+  return `${coin.cell.i}:${coin.cell.j}#${coin.serial}`;
+}
 
-    coinDiv
-      .querySelector<HTMLButtonElement>(`#collect-${index}`)!
-      .addEventListener("click", () => {
-        collectCoin(cache, coin);
-        updateInventoryPanel();
-      });
+function createCachePopup(cache: Cache): HTMLDivElement {
+  // create popup
+  const cachePopupDiv = document.createElement("div");
+  cachePopupDiv.innerHTML = `
+    <div><h3>Cache ${
+    cache.coords.lat.toFixed(
+      COORD_PRECISION,
+    )
+  }, ${cache.coords.lng.toFixed(COORD_PRECISION)}</h3></div>
+  `;
 
+  appendCollectButtons(cachePopupDiv, cache);
+  appendDepositButton(cachePopupDiv, cache);
+
+  return cachePopupDiv;
+}
+
+function createCoinButton(cache: Cache, coin: Coin): HTMLDivElement {
+  // create button for new coin
+  const coinDiv = document.createElement("div");
+  coinDiv.innerHTML = `Coin: [${
+    getCoinString(coin)
+  }]<button id="collect-${coin.serial}">Collect</button>`;
+
+  // Add event listener to the new collect button
+  coinDiv
+    .querySelector<HTMLButtonElement>(`#collect-${coin.serial}`)!
+    .addEventListener("click", () => {
+      collectCoin(cache, coin, coinDiv);
+      updateInventoryPanel();
+    });
+
+  return coinDiv;
+}
+
+function appendCollectButtons(popupDiv: HTMLDivElement, cache: Cache): void {
+  cache.coins.forEach((coin) => {
+    const coinDiv = createCoinButton(cache, coin);
     popupDiv.appendChild(coinDiv);
   });
 }
@@ -135,27 +156,32 @@ function appendDepositButton(popupDiv: HTMLDivElement, cache: Cache): void {
   depositButton.innerHTML = "Deposit Coin";
 
   depositButton.addEventListener("click", () => {
-    depositCoin(cache);
+    depositCoin(cache, popupDiv);
     updateInventoryPanel();
   });
 
   popupDiv.appendChild(depositButton);
 }
 
-function collectCoin(cache: Cache, coin: Coin): void {
+function collectCoin(cache: Cache, coin: Coin, coinDiv: HTMLDivElement): void {
+  // transfer coin to inventory and remove from cache's coin list
   playerInventory.push(coin);
-  cache.coins = cache.coins.filter((c) => c.serial !== coin.serial);
+  cache.coins = cache.coins.filter((c) => c.serial !== coin.serial); // Source: Brace, "How to remove a specific item from a list"
+
+  // remove coin's collect button
+  coinDiv.remove();
 }
 
-function depositCoin(cache: Cache): void {
+function depositCoin(cache: Cache, popupDiv: HTMLDivElement): void {
   if (playerInventory.length > 0) {
-    cache.coins.push(playerInventory.pop()!);
-  }
-}
+    // transfer coin from inventory to cache
+    const depositedCoin = playerInventory.pop()!;
+    cache.coins.push(depositedCoin);
 
-function updateInventoryPanel(): void {
-  const coinList = playerInventory.map((coin) => coin.serial).join(", ");
-  inventoryPanel.innerHTML = `Inventory:  ${coinList || " "}`;
+    // create button for new coin
+    const coinDiv = createCoinButton(cache, depositedCoin);
+    popupDiv.appendChild(coinDiv);
+  }
 }
 
 // Look around the player's neighborhood for caches to spawn
@@ -167,8 +193,3 @@ for (let i = -NEIGHBORHOOD_SIZE; i < NEIGHBORHOOD_SIZE; i++) {
     }
   }
 }
-
-// // temporary fix to Vite's asset static handling. Code from akhalim, https://github.com/akhalim1/cmpm-121-demo-3/blob/main/src/main.ts
-// function _resolveAssetPath(relativePath: string): string {
-//   return import.meta.resolve(`../public/${relativePath}`);
-// }
