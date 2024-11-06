@@ -39,7 +39,7 @@ h1 {
 
 h2 {
   font-size: 2.4em;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.1;
   font-family: Arial, Helvetica, sans-serif;
   color: #3b6492;
@@ -47,9 +47,10 @@ h2 {
 
 #controlPanel {
   padding: 1rem;
+  padding-top: 0;
 }
 
-#statusPanel {
+#inventoryPanel {
   padding: 1rem;
   font-size: 1.5em;
   color: #3b6492;
@@ -59,7 +60,7 @@ h2 {
   margin-top: 40px;
   border-radius: 40px;
   width: 80vh;
-  height: 80vh;
+  height: 85vh;
   background-color: #c9d7ff;
   display: flex;
   align-items: center;
@@ -75,7 +76,7 @@ h2 {
   height: 100%;
   background-color: white;
   max-width: 90%;
-  max-height: 66%;
+  max-height: 55%;
   overflow: hidden;
   box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5);
 }
@@ -93,19 +94,23 @@ h2 {
 }
 
 button {
+  margin: 0 0 2px 10px;
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: 3px solid transparent;
   padding: 0.6em 1.2em;
-  font-size: 1em;
+  font-size: em;
+  color: #5854af;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: rgb(228, 225, 255);
   cursor: pointer;
   transition: border-color 0.25s;
 }
 
 button:hover {
   border-color: #646cff;
+  transition: 0.25s ease;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 button:focus,
