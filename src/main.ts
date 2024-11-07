@@ -26,8 +26,8 @@ const map = leaflet.map(document.getElementById("map")!, {
   zoom: GAMEPLAY_ZOOM_LEVEL,
   minZoom: GAMEPLAY_ZOOM_LEVEL,
   maxZoom: GAMEPLAY_ZOOM_LEVEL,
-  zoomControl: true,
-  scrollWheelZoom: true,
+  zoomControl: false,
+  scrollWheelZoom: false,
 });
 
 const playerInventory: Coin[] = [];
@@ -67,6 +67,7 @@ const inventoryPanel = document.querySelector<HTMLDivElement>(
 )!;
 updateInventoryPanel();
 
+// display the player's coins
 function updateInventoryPanel(): void {
   const coinList = playerInventory
     .map((coin) => getCoinString(coin))
