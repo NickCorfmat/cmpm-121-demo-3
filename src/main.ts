@@ -10,6 +10,27 @@ import "./leafletWorkaround.ts";
 // Deterministic random number generator
 import luck from "./luck.ts";
 
+// Grid cell flyweight factory
+import "./board.ts";
+//import { Board } from "./board.ts";
+
+// Interfaces
+export interface Cell {
+  i: number;
+  j: number;
+}
+
+interface Coin {
+  i: number;
+  j: number;
+  serial: string;
+}
+
+interface Cache {
+  coords: leaflet.latLng;
+  coins: Coin[];
+}
+
 // Classroom location (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
 
@@ -32,21 +53,6 @@ const map = leaflet.map(document.getElementById("map")!, {
 
 const playerInventory: Coin[] = [];
 
-interface Cell {
-  i: number;
-  j: number;
-}
-
-interface Coin {
-  cell: Cell;
-  serial: string;
-}
-
-interface Cache {
-  coords: leaflet.latLng;
-  coins: Coin[];
-}
-
 // Add a tile layer to the map
 leaflet
   .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -57,9 +63,8 @@ leaflet
   .addTo(map);
 
 // Add a player marker to the map
-const playerMarker = leaflet.marker(OAKES_CLASSROOM);
+const playerMarker = leaflet.marker(OAKES_CLASSROOM).addTo(map);
 playerMarker.bindPopup("Hello, fellow traveler!");
-playerMarker.addTo(map);
 
 // Display the player's points
 const inventoryPanel = document.querySelector<HTMLDivElement>(
@@ -101,7 +106,7 @@ function generateCoinsForCache(i: number, j: number): Coin[] {
   const coins: Coin[] = [];
 
   for (let n = 0; n < numCoins; n++) {
-    coins.push({ cell: { i: i, j: j }, serial: `${n}` });
+    coins.push({ i: i, j: j, serial: `${n}` });
   }
 
   return coins;
@@ -109,7 +114,7 @@ function generateCoinsForCache(i: number, j: number): Coin[] {
 
 // Return coin-bracket formatted string
 function getCoinString(coin: Coin): string {
-  return `[${coin.cell.i}:${coin.cell.j}#${coin.serial}]`;
+  return `[${coin.i}:${coin.j}#${coin.serial}]`;
 }
 
 function createCachePopup(cache: Cache): HTMLDivElement {
