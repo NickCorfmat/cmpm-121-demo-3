@@ -50,7 +50,7 @@ export class Board {
     const resultCells: Cell[] = [];
     const originCell = this.getCellForPoint(point);
 
-    // Retrieve all nearby cells within a certain radius of the origin
+    // retrieve all nearby cells within a certain radius of the origin
     for (
       let x = -this.tileVisibilityRadius;
       x <= this.tileVisibilityRadius;
