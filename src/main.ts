@@ -37,6 +37,7 @@ const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
 // Tunable gameplay parameters
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_WIDTH = 1e-4;
+const TILE_DEGREES = TILE_WIDTH;
 const TILE_VISIBILITY_RADIUS = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
 
@@ -53,6 +54,7 @@ const map = leaflet.map(document.getElementById("map")!, {
   scrollWheelZoom: false,
 });
 
+const playerLocation = OAKES_CLASSROOM;
 const playerInventory: Coin[] = [];
 
 // Add a tile layer to the map
@@ -67,6 +69,37 @@ leaflet
 // Add a player marker to the map
 const playerMarker = leaflet.marker(OAKES_CLASSROOM).addTo(map);
 playerMarker.bindPopup("Hello, fellow traveler!");
+
+// Get player movement buttons define in index.html
+const northButton = document.getElementById("north") as HTMLButtonElement;
+const southButton = document.getElementById("south") as HTMLButtonElement;
+const westButton = document.getElementById("west") as HTMLButtonElement;
+const eastButton = document.getElementById("east") as HTMLButtonElement;
+
+// Add event listeners to the player movement buttons
+northButton.addEventListener("click", () => {
+  movePlayer(1, 0);
+});
+
+southButton.addEventListener("click", () => {
+  movePlayer(-1, 0);
+});
+
+westButton.addEventListener("click", () => {
+  movePlayer(0, -1);
+});
+
+eastButton.addEventListener("click", () => {
+  movePlayer(0, 1);
+});
+
+function movePlayer(vertical: number, horizontal: number): void {
+  playerLocation.lat = playerLocation.lat + (TILE_DEGREES * vertical);
+  playerLocation.lng = playerLocation.lng + (TILE_DEGREES * horizontal);
+
+  playerMarker.setLatLng(playerLocation);
+  map.panTo(playerLocation);
+}
 
 // Display the player's points
 updateInventoryPanel();
