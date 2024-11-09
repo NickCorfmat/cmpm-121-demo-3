@@ -31,6 +31,12 @@ interface Cache {
   coins: Coin[];
 }
 
+interface DirectionalButtonConfig {
+  name: string;
+  vertical: number;
+  horizontal: number;
+}
+
 // Classroom location (as identified on Google Maps)
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
 
@@ -70,38 +76,35 @@ leaflet
 const playerMarker = leaflet.marker(OAKES_CLASSROOM).addTo(map);
 playerMarker.bindPopup("Hello, fellow traveler!");
 
-// Get player movement buttons define in index.html
-const northButton = document.getElementById("north") as HTMLButtonElement;
-const southButton = document.getElementById("south") as HTMLButtonElement;
-const westButton = document.getElementById("west") as HTMLButtonElement;
-const eastButton = document.getElementById("east") as HTMLButtonElement;
+// Initialize player movement buttons defined in index.html
+const directionConfigs: DirectionalButtonConfig[] = [
+  { name: "north", vertical: 1, horizontal: 0 },
+  { name: "south", vertical: -1, horizontal: 0 },
+  { name: "west", vertical: 0, horizontal: -1 },
+  { name: "east", vertical: 0, horizontal: 1 },
+];
 
-// Add event listeners to the player movement buttons
-northButton.addEventListener("click", () => {
-  movePlayer(1, 0);
+// Create player movement button and attach event listener
+// Source: Original movement code by me, simplified with the help of Brace.
+// Prompt: "How can I refactor my original player movement code to be more concise?"
+directionConfigs.forEach(({ name, vertical, horizontal }) => {
+  const button = document.querySelector<HTMLButtonElement>(`#${name}`)!;
+
+  button.addEventListener("click", () => {
+    movePlayer(vertical, horizontal);
+  });
 });
 
-southButton.addEventListener("click", () => {
-  movePlayer(-1, 0);
-});
+function movePlayer(deltaLat: number, delatLng: number): void {
+  playerLocation.lat += TILE_DEGREES * deltaLat;
+  playerLocation.lng += TILE_DEGREES * delatLng;
 
-westButton.addEventListener("click", () => {
-  movePlayer(0, -1);
-});
-
-eastButton.addEventListener("click", () => {
-  movePlayer(0, 1);
-});
-
-function movePlayer(vertical: number, horizontal: number): void {
-  playerLocation.lat = playerLocation.lat + (TILE_DEGREES * vertical);
-  playerLocation.lng = playerLocation.lng + (TILE_DEGREES * horizontal);
-
+  // update map to new player location
   playerMarker.setLatLng(playerLocation);
   map.panTo(playerLocation);
 }
 
-// Display the player's points
+// Display the player's coins
 updateInventoryPanel();
 
 // display the player's coins
