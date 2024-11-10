@@ -30,7 +30,7 @@ const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_WIDTH = 1e-4;
 const TILE_DEGREES = TILE_WIDTH;
-const TILE_VISIBILITY_RADIUS = 8;
+const TILE_VISIBILITY_RADIUS = 10;
 const CACHE_SPAWN_PROBABILITY = 0.1;
 
 // Create Board for Cells
@@ -88,6 +88,8 @@ function movePlayer(deltaLat: number, delatLng: number): void {
   // update map to new player location
   playerMarker.setLatLng(playerLocation);
   map.panTo(playerLocation);
+
+  showNearbyCells();
 }
 
 // Display the player's coins
@@ -95,12 +97,11 @@ updateInventoryPanel();
 
 // display the player's coins
 function updateInventoryPanel(): void {
-  const inventoryPanel = document.querySelector<HTMLDivElement>(
-    "#inventoryPanel",
-  )!;
+  const inventoryPanel =
+    document.querySelector<HTMLDivElement>("#inventoryPanel")!;
 
   const coinList = playerInventory
-    .map((coin) => `[${getCoinString(coin)}]`)
+    .map((coin) => `[${coin.toString()}]`)
     .join(", ");
   inventoryPanel.innerHTML = `${coinList || " "}`;
 }
@@ -110,11 +111,12 @@ function spawnCache(i: number, j: number): void {
   const cell: Cell = { i, j };
   const bounds = board.getCellBounds(cell);
 
-  // Instantiate the cache's leaflet coordinates and coins
-  const cache: Cache = new Cache(
-    bounds.getCenter(),
-    generateCoinsForCache(i, j),
-  );
+  // Instantiate the cache's coordinates and coins
+  const cache: Cache = new Cache(i, j);
+  cache.setCoins(generateCoinsForCache(i, j));
+
+  // Save cache state on the board using Momento Pattern
+  board.setCache(i, j, cache);
 
   // Add a rectangle to the map to represent the cache
   const rect = leaflet.rectangle(bounds);
@@ -130,27 +132,20 @@ function generateCoinsForCache(i: number, j: number): Coin[] {
   const numCoins = Math.floor(luck([i, j, "coins"].toString()) * 8);
   const coins: Coin[] = [];
 
-  // Assign unique id to each coin in 'i:j#serial' format
+  // Create list of coins in 'i:j#serial' format
   for (let n = 0; n < numCoins; n++) {
-    coins.push({ i: i, j: j, serial: `${n}` });
+    const coin = new Coin(i, j, `${n}`);
+    coins.push(coin);
   }
 
   return coins;
 }
 
-// Return coin-bracket formatted string
-function getCoinString(coin: Coin): string {
-  return `${coin.i}:${coin.j}#${coin.serial}`;
-}
-
 function createCachePopup(cache: Cache): HTMLDivElement {
-  // get the cache's cell
-  const cell: Cell = board.getCellForPoint(cache.coords);
-
   // create popup
   const cachePopupDiv = document.createElement("div");
   cachePopupDiv.innerHTML = `
-    <div><h3>Cache ${cell.i}, ${cell.j}</h3></div>
+    <div><h3>Cache ${cache.i}, ${cache.j}</h3></div>
   `;
 
   appendCollectButtons(cachePopupDiv, cache);
@@ -162,9 +157,9 @@ function createCachePopup(cache: Cache): HTMLDivElement {
 function createCoinButton(cache: Cache, coin: Coin): HTMLDivElement {
   // create button for new coin
   const coinDiv = document.createElement("div");
-  coinDiv.innerHTML = `Coin: [${
-    getCoinString(coin)
-  }]<button id="collect-${coin.serial}">Collect</button>`;
+  coinDiv.innerHTML = `Coin: [${coin.toString()}]<button id="collect-${
+    coin.serial
+  }">Collect</button>`;
 
   // Add event listener to the new collect button
   coinDiv
@@ -220,13 +215,22 @@ function depositCoin(cache: Cache, popupDiv: HTMLDivElement): void {
   }
 }
 
-// Look around the player's neighborhood for caches to spawn
-for (let x = -TILE_VISIBILITY_RADIUS; x < TILE_VISIBILITY_RADIUS; x++) {
-  for (let y = -TILE_VISIBILITY_RADIUS; y < TILE_VISIBILITY_RADIUS; y++) {
-    // If location i,j is lucky enough, spawn a cache!
-    if (luck([x, y].toString()) < CACHE_SPAWN_PROBABILITY) {
-      const cell = board.getCellForPoint(OAKES_CLASSROOM);
-      spawnCache(cell.i + x, cell.j + y);
+function showNearbyCells(): void {
+  const visibleCells = board.getCellsNearPoint(playerLocation);
+
+  visibleCells.forEach((cell) => {
+    // Restore cache based on saved state
+    const cache = board.getCache(cell.i, cell.j);
+
+    if (cache) {
+      // Display regenerated cache's popup
+      createCachePopup(cache);
+    } else if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
+      // Create new cache based on global spawn rate
+      spawnCache(cell.i, cell.j);
     }
-  }
+  });
 }
+
+// Display nearby cells once upon game start
+showNearbyCells();

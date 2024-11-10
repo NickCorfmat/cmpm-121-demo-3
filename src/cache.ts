@@ -1,5 +1,3 @@
-import leaflet from "leaflet";
-
 // Class orgnaziation structure inspired by Mako1688,
 // https://github.com/Mako1688/cmpm-121-demo-3/blob/main/src/geocache.ts
 
@@ -9,31 +7,36 @@ interface Momento<T> {
   fromMomento(momento: T): void;
 }
 
-export interface Coin {
-  i: number;
-  j: number;
-  serial: string;
+export class Coin {
+  constructor(public i: number, public j: number, public serial: string) {}
+
+  // Return coin-bracket formatted string
+  toString(): string {
+    return `${this.i}:${this.j}#${this.serial}`;
+  }
 }
 
 export class Cache implements Momento<string> {
-  coords: leaflet.latLng;
-  coins: Coin[];
+  public coins: Coin[] = [];
 
-  constructor(coords: leaflet.latLng, coins: Coin[]) {
-    this.coords = coords;
+  constructor(public i: number, public j: number) {}
+
+  setCoins(coins: Coin[]) {
     this.coins = coins;
   }
 
   toMomento() {
     return JSON.stringify({
-      coords: { lat: this.coords.lat, lng: this.coords.lng },
+      i: this.i,
+      j: this.j,
       coins: this.coins,
     });
   }
 
   fromMomento(momento: string) {
     const state = JSON.parse(momento);
-    this.coords = leaflet.latLng(state.coords.lat, state.coords.lng);
+    this.i = state.i;
+    this.j = state.j;
     this.coins = state.coins;
   }
 }

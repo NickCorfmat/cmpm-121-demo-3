@@ -3,6 +3,8 @@ import leaflet from "leaflet";
 // Class organization structure inspired by Mako1688,
 // https://github.com/Mako1688/cmpm-121-demo-3/blob/main/src/board.ts
 
+import { Cache } from "./cache.ts";
+
 // Interfaces
 export interface Cell {
   i: number;
@@ -15,11 +17,13 @@ export class Board {
   readonly tileVisibilityRadius: number;
 
   private readonly knownCells: Map<string, Cell>;
+  private readonly cacheStates: Map<string, string>;
 
   constructor(tileWidth: number, tileVisibilityRadius: number) {
     this.tileWidth = tileWidth;
     this.tileVisibilityRadius = tileVisibilityRadius;
     this.knownCells = new Map<string, Cell>();
+    this.cacheStates = new Map<string, string>();
   }
 
   private getCanonicalCell(cell: Cell): Cell {
@@ -37,8 +41,8 @@ export class Board {
   getCellForPoint(point: leaflet.LatLng): Cell {
     // return grid cells in global coordinate system (anchored at 0N 0E)
     return this.getCanonicalCell({
-      i: Math.trunc(point.lat / this.tileWidth),
-      j: Math.trunc(point.lng / this.tileWidth),
+      i: Math.floor(point.lat / this.tileWidth),
+      j: Math.floor(point.lng / this.tileWidth),
     });
   }
 
@@ -77,5 +81,29 @@ export class Board {
     }
 
     return resultCells;
+  }
+
+  // Code section inspired by Mako1688. I liked how he encapsulated
+  // the cache Momento pattern in board.ts and defined functions
+  // to easily save and retrieve cache states.
+
+  // Save cache state as momento string
+  setCache(i: number, j: number, cache: Cache): void {
+    const key = `${i},${j}`;
+    this.cacheStates.set(key, cache.toMomento());
+  }
+
+  // Retrieve cache by accessing its momento string
+  getCache(i: number, j: number): Cache | null {
+    const momento = this.cacheStates.get(`${i},${j}`);
+
+    if (momento) {
+      const cache = new Cache(i, j);
+      cache.fromMomento(momento);
+
+      return cache;
+    }
+
+    return null;
   }
 }
