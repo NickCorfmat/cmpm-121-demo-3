@@ -50,9 +50,8 @@ const map = leaflet.map(document.getElementById("map")!, {
 let playerLocation: leaflet.latLng = OAKES_CLASSROOM;
 
 const playerInventory: Coin[] = [];
-const playerMoveHistory: leaflet.latLng[] = [];
 
-const playerPolyline: leaflet.polyline = leaflet.polyline(playerMoveHistory, {
+const playerPolyline: leaflet.polyline = leaflet.polyline([], {
   color: "red",
   weight: 5,
   opacity: 0.3,
@@ -73,6 +72,26 @@ leaflet
 const playerMarker = leaflet.marker(OAKES_CLASSROOM).addTo(map);
 playerMarker.bindPopup("Hello, fellow traveler!");
 
+// Automatic position updating based on device's real-world location
+const geolocatorButton = document.querySelector<HTMLButtonElement>("#sensor")!;
+
+geolocatorButton.addEventListener("click", () => {
+  // clear polyline and start drawing from new location
+  playerPolyline.setLatLngs([]);
+
+  // track changes in device's current location
+  navigator.geolocation.watchPosition((position) => {
+    const { latitude, longitude } = position.coords;
+    const newLocation = leaflet.latLng(latitude, longitude);
+
+    // refresh map to account for new player location
+    updatePlayerLocation(newLocation);
+    updatePlayerPolyLine(newLocation);
+
+    showNearbyCaches();
+  });
+});
+
 // Initialize player movement buttons defined in index.html
 const directionConfigs: DirectionalButtonConfig[] = [
   { name: "north", vertical: 1, horizontal: 0 },
@@ -85,7 +104,6 @@ const directionConfigs: DirectionalButtonConfig[] = [
 // Source: Original movement code by me, simplified with the help of Brace.
 directionConfigs.forEach(({ name, vertical, horizontal }) => {
   const button = document.querySelector<HTMLButtonElement>(`#${name}`)!;
-
   button.addEventListener("click", () => {
     movePlayer(vertical, horizontal);
   });
@@ -97,23 +115,28 @@ function movePlayer(deltaLat: number, delatLng: number): void {
     playerLocation.lng + TILE_DEGREES * delatLng,
   );
 
+  // refresh map to account for new player location
+  updatePlayerLocation(newLocation);
+  updatePlayerPolyLine(newLocation);
+
+  showNearbyCaches();
+}
+
+function updatePlayerLocation(newLocation: leaflet.latLng): void {
   // update player location to new location
   playerLocation = newLocation;
 
   // update map to new player location
   playerMarker.setLatLng(newLocation);
   map.panTo(newLocation);
-
-  updatePlayerMoveHistory(newLocation);
-  showNearbyCaches();
 }
 
-function updatePlayerMoveHistory(newLocation: leaflet.latLng): void {
+function updatePlayerPolyLine(newLocation: leaflet.latLng): void {
   playerPolyline.addLatLng(newLocation); // add new point to polyline
 }
 
 // update polyline with initial player location
-updatePlayerMoveHistory(playerLocation);
+updatePlayerPolyLine(playerLocation);
 
 // display the player's coins
 function updateInventoryPanel(): void {
