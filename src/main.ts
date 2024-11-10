@@ -46,8 +46,19 @@ const map = leaflet.map(document.getElementById("map")!, {
   scrollWheelZoom: false,
 });
 
-const playerLocation = OAKES_CLASSROOM;
+// Player variables
+let playerLocation: leaflet.latLng = OAKES_CLASSROOM;
+
 const playerInventory: Coin[] = [];
+const playerMoveHistory: leaflet.latLng[] = [];
+
+const playerPolyline: leaflet.polyline = leaflet.polyline(playerMoveHistory, {
+  color: "red",
+  weight: 5,
+  opacity: 0.3,
+});
+
+playerPolyline.addTo(map);
 
 // Add a tile layer to the map
 leaflet
@@ -81,18 +92,28 @@ directionConfigs.forEach(({ name, vertical, horizontal }) => {
 });
 
 function movePlayer(deltaLat: number, delatLng: number): void {
-  playerLocation.lat += TILE_DEGREES * deltaLat;
-  playerLocation.lng += TILE_DEGREES * delatLng;
+  const newLocation = leaflet.latLng(
+    playerLocation.lat + TILE_DEGREES * deltaLat,
+    playerLocation.lng + TILE_DEGREES * delatLng,
+  );
+
+  // update player location to new location
+  playerLocation = newLocation;
 
   // update map to new player location
-  playerMarker.setLatLng(playerLocation);
-  map.panTo(playerLocation);
+  playerMarker.setLatLng(newLocation);
+  map.panTo(newLocation);
 
+  updatePlayerMoveHistory(newLocation);
   showNearbyCaches();
 }
 
-// Display the player's coins
-updateInventoryPanel();
+function updatePlayerMoveHistory(newLocation: leaflet.latLng): void {
+  playerPolyline.addLatLng(newLocation); // add new point to polyline
+}
+
+// update polyline with initial player location
+updatePlayerMoveHistory(playerLocation);
 
 // display the player's coins
 function updateInventoryPanel(): void {
@@ -105,6 +126,9 @@ function updateInventoryPanel(): void {
     .join(", ");
   inventoryPanel.innerHTML = `${coinList || " "}`;
 }
+
+// Display the player's coins
+updateInventoryPanel();
 
 // Add caches to the map by cell numbers
 function spawnCache(i: number, j: number): void {
@@ -233,3 +257,23 @@ function showNearbyCaches(): void {
 
 // Display nearby cells once upon game start
 showNearbyCaches();
+
+// Persistent data storage using cookies
+// Code modified from https://gist.github.com/joduplessis/7b3b4340353760e945f972a69e855d11
+// function setCookie(name: string, value: string): void {
+//   const date = new Date();
+
+//   // Set cookie expiration date
+//   date.setTime(date.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+//   document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/`;
+// }
+
+// function getCookie(name: string): string {
+//   const value = "; " + document.cookie;
+//   const parts = value.split("; " + name + "=");
+
+//   if (parts.length == 2) {
+//     return parts.pop()!.split(";").shift();
+//   }
+// }
