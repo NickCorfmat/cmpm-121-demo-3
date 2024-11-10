@@ -72,7 +72,6 @@ const directionConfigs: DirectionalButtonConfig[] = [
 
 // Create player movement button and attach event listener
 // Source: Original movement code by me, simplified with the help of Brace.
-// Prompt: "How can I refactor my original player movement code to be more concise?"
 directionConfigs.forEach(({ name, vertical, horizontal }) => {
   const button = document.querySelector<HTMLButtonElement>(`#${name}`)!;
 
@@ -89,7 +88,7 @@ function movePlayer(deltaLat: number, delatLng: number): void {
   playerMarker.setLatLng(playerLocation);
   map.panTo(playerLocation);
 
-  showNearbyCells();
+  showNearbyCaches();
 }
 
 // Display the player's coins
@@ -97,8 +96,9 @@ updateInventoryPanel();
 
 // display the player's coins
 function updateInventoryPanel(): void {
-  const inventoryPanel =
-    document.querySelector<HTMLDivElement>("#inventoryPanel")!;
+  const inventoryPanel = document.querySelector<HTMLDivElement>(
+    "#inventoryPanel",
+  )!;
 
   const coinList = playerInventory
     .map((coin) => `[${coin.toString()}]`)
@@ -157,9 +157,8 @@ function createCachePopup(cache: Cache): HTMLDivElement {
 function createCoinButton(cache: Cache, coin: Coin): HTMLDivElement {
   // create button for new coin
   const coinDiv = document.createElement("div");
-  coinDiv.innerHTML = `Coin: [${coin.toString()}]<button id="collect-${
-    coin.serial
-  }">Collect</button>`;
+  coinDiv.innerHTML =
+    `Coin: [${coin.toString()}]<button id="collect-${coin.serial}">Collect</button>`;
 
   // Add event listener to the new collect button
   coinDiv
@@ -215,7 +214,7 @@ function depositCoin(cache: Cache, popupDiv: HTMLDivElement): void {
   }
 }
 
-function showNearbyCells(): void {
+function showNearbyCaches(): void {
   const visibleCells = board.getCellsNearPoint(playerLocation);
 
   visibleCells.forEach((cell) => {
@@ -233,4 +232,4 @@ function showNearbyCells(): void {
 }
 
 // Display nearby cells once upon game start
-showNearbyCells();
+showNearbyCaches();

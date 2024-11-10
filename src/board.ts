@@ -83,9 +83,9 @@ export class Board {
     return resultCells;
   }
 
-  // Code section inspired by Mako1688. I liked how he encapsulated
-  // the cache Momento pattern in board.ts and defined functions
-  // to easily save and retrieve cache states.
+  // Code section inspired by Mako1688.
+  // I liked how they encapsulated the cache Momento pattern in board.ts
+  // and defined functions to easily save and retrieve cache states.
 
   // Save cache state as momento string
   setCache(i: number, j: number, cache: Cache): void {
