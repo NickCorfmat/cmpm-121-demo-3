@@ -12,24 +12,10 @@ import luck from "./luck.ts";
 
 // Grid cell flyweight factory
 import "./board.ts";
-import { Board } from "./board.ts";
+import { Board, Cell } from "./board.ts";
 
 // Interfaces
-export interface Cell {
-  i: number;
-  j: number;
-}
-
-interface Coin {
-  i: number;
-  j: number;
-  serial: string;
-}
-
-interface Cache {
-  coords: leaflet.latLng;
-  coins: Coin[];
-}
+import { Cache, Coin } from "./cache.ts";
 
 interface DirectionalButtonConfig {
   name: string;
@@ -125,10 +111,10 @@ function spawnCache(i: number, j: number): void {
   const bounds = board.getCellBounds(cell);
 
   // Instantiate the cache's leaflet coordinates and coins
-  const cache: Cache = {
-    coords: bounds.getCenter(),
-    coins: generateCoinsForCache(i, j),
-  };
+  const cache: Cache = new Cache(
+    bounds.getCenter(),
+    generateCoinsForCache(i, j),
+  );
 
   // Add a rectangle to the map to represent the cache
   const rect = leaflet.rectangle(bounds);

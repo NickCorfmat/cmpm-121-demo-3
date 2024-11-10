@@ -1,7 +1,13 @@
 import leaflet from "leaflet";
 
-// Import Cell interface defined in main.ts
-import { Cell } from "./main.ts";
+// Class organization structure inspired by Mako1688,
+// https://github.com/Mako1688/cmpm-121-demo-3/blob/main/src/board.ts
+
+// Interfaces
+export interface Cell {
+  i: number;
+  j: number;
+}
 
 // Board flyweight factory
 export class Board {
