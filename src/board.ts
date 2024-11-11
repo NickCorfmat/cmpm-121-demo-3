@@ -22,6 +22,7 @@ export class Board {
   constructor(tileWidth: number, tileVisibilityRadius: number) {
     this.tileWidth = tileWidth;
     this.tileVisibilityRadius = tileVisibilityRadius;
+
     this.knownCells = new Map<string, Cell>();
     this.cacheStates = new Map<string, string>();
   }
@@ -84,13 +85,14 @@ export class Board {
   }
 
   // Code section inspired by Mako1688.
-  // I liked how they encapsulated the cache Momento pattern in board.ts
-  // and defined functions to easily save and retrieve cache states.
+  // I liked how they encapsulated the cache Momento pattern in board.ts -->
 
-  // Save cache state as momento string
+  // Save cache state on board as momento string
   setCache(i: number, j: number, cache: Cache): void {
+    // save cache state
     const key = `${i},${j}`;
-    this.cacheStates.set(key, cache.toMomento());
+    const momento = cache.toMomento();
+    this.cacheStates.set(key, momento);
   }
 
   // Retrieve cache by accessing its momento string
@@ -105,5 +107,21 @@ export class Board {
     }
 
     return null;
+  }
+
+  getCacheStringify(): { key: string; momento: string }[] {
+    const cacheStrings: { key: string; momento: string }[] = [];
+
+    this.cacheStates.forEach((key, momento) => {
+      cacheStrings.push({ key, momento });
+    });
+
+    return cacheStrings;
+  }
+
+  setCacheStates(caches: { key: string; momento: string }[]): void {
+    caches.forEach(({ key, momento }) => {
+      this.cacheStates.set(key, momento);
+    });
   }
 }

@@ -30,7 +30,7 @@ const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_WIDTH = 1e-4;
 const TILE_DEGREES = TILE_WIDTH;
-const TILE_VISIBILITY_RADIUS = 10;
+const TILE_VISIBILITY_RADIUS = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
 
 // Create Board for Cells
@@ -49,7 +49,8 @@ const map = leaflet.map(document.getElementById("map")!, {
 // Player variables
 let playerLocation: leaflet.latLng = OAKES_CLASSROOM;
 
-const playerInventory: Coin[] = [];
+let playerInventory: Coin[] = [];
+let playerMoveHistory: leaflet.latLng[] = [];
 
 const playerPolyline: leaflet.polyline = leaflet.polyline([], {
   color: "red",
@@ -72,7 +73,7 @@ leaflet
 const playerMarker = leaflet.marker(OAKES_CLASSROOM).addTo(map);
 playerMarker.bindPopup("Hello, fellow traveler!");
 
-// Automatic position updating based on device's real-world location
+// 🌐 Automatic position updating based on device's real-world location
 const geolocatorButton = document.querySelector<HTMLButtonElement>("#sensor")!;
 
 geolocatorButton.addEventListener("click", () => {
@@ -89,7 +90,18 @@ geolocatorButton.addEventListener("click", () => {
     updatePlayerPolyLine(newLocation);
 
     showNearbyCaches();
+
+    saveGameState();
   });
+});
+
+// 🚮 Reset game state and return all coins to original caches
+const resetButton = document.querySelector<HTMLButtonElement>("#reset")!;
+
+resetButton.addEventListener("click", () => {
+  updatePlayerLocation(OAKES_CLASSROOM);
+  playerPolyline.setLatLngs([]);
+  playerMoveHistory = [];
 });
 
 // Initialize player movement buttons defined in index.html
@@ -120,6 +132,8 @@ function movePlayer(deltaLat: number, delatLng: number): void {
   updatePlayerPolyLine(newLocation);
 
   showNearbyCaches();
+
+  saveGameState();
 }
 
 function updatePlayerLocation(newLocation: leaflet.latLng): void {
@@ -132,6 +146,7 @@ function updatePlayerLocation(newLocation: leaflet.latLng): void {
 }
 
 function updatePlayerPolyLine(newLocation: leaflet.latLng): void {
+  playerMoveHistory.push(newLocation); // log new coords in player's path
   playerPolyline.addLatLng(newLocation); // add new point to polyline
 }
 
@@ -245,8 +260,13 @@ function collectCoin(cache: Cache, coin: Coin, coinDiv: HTMLDivElement): void {
   playerInventory.push(coin);
   cache.coins = cache.coins.filter((c) => c.serial !== coin.serial); // Source: Brace, "How to remove a specific item from a list"
 
+  // update new cache state on board
+  board.setCache(cache.i, cache.j, cache);
+
   // remove coin's collect button
   coinDiv.remove();
+
+  saveGameState();
 }
 
 function depositCoin(cache: Cache, popupDiv: HTMLDivElement): void {
@@ -255,9 +275,14 @@ function depositCoin(cache: Cache, popupDiv: HTMLDivElement): void {
     const depositedCoin = playerInventory.pop()!;
     cache.coins.push(depositedCoin);
 
+    // update new cache state on board
+    board.setCache(cache.i, cache.j, cache);
+
     // create button for new coin
     const coinDiv = createCoinButton(cache, depositedCoin);
     popupDiv.appendChild(coinDiv);
+
+    saveGameState();
   }
 }
 
@@ -281,22 +306,30 @@ function showNearbyCaches(): void {
 // Display nearby cells once upon game start
 showNearbyCaches();
 
-// Persistent data storage using cookies
-// Code modified from https://gist.github.com/joduplessis/7b3b4340353760e945f972a69e855d11
-// function setCookie(name: string, value: string): void {
-//   const date = new Date();
+function saveGameState(): void {
+  const gameState = {
+    playerLocation,
+    playerInventory,
+    playerMoveHistory,
+    caches: board.getCacheStringify(),
+  };
 
-//   // Set cookie expiration date
-//   date.setTime(date.getTime() + 7 * 24 * 60 * 60 * 1000);
+  console.log("game state saved");
 
-//   document.cookie = `${name}=${value};expires=${date.toUTCString()};path=/`;
-// }
+  localStorage.setItem("game_state", JSON.stringify(gameState));
+}
 
-// function getCookie(name: string): string {
-//   const value = "; " + document.cookie;
-//   const parts = value.split("; " + name + "=");
+loadGameState();
 
-//   if (parts.length == 2) {
-//     return parts.pop()!.split(";").shift();
-//   }
-// }
+function loadGameState(): void {
+  const gameState = localStorage.getItem("game_state");
+
+  if (gameState) {
+    const state = JSON.parse(gameState);
+
+    playerLocation = state.playerLocation;
+    playerInventory = state.playerInventory;
+    playerMoveHistory = state.playerMoveHistory;
+    board.setCacheStates(state.caches);
+  }
+}
