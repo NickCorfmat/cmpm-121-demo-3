@@ -1,3 +1,4 @@
+// @deno-types="npm:@types/leaflet@^1.9.14"
 import leaflet from "leaflet";
 
 // Style sheets
@@ -7,38 +8,35 @@ import "./style.css";
 // Fix missing marker images
 import "./leafletWorkaround.ts";
 
-// Deterministic random number generator
-import luck from "./luck.ts";
-
-// Grid cell flyweight factory
-import "./board.ts";
-import { Board, Cell } from "./board.ts";
-
 // Interfaces
+import luck from "./luck.ts";
+import { Board, Cell } from "./board.ts";
 import { Cache, Coin } from "./cache.ts";
 
+// Classes
 interface DirectionalButtonConfig {
   name: string;
   vertical: number;
   horizontal: number;
 }
 
-// Classroom location (as identified on Google Maps)
-const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
+// Oakes classroom location (as identified on Google Maps)
+const PLAYER_ORIGIN = leaflet.latLng(36.98949379578401, -122.06277128548504);
 
 // Tunable gameplay parameters
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_WIDTH = 1e-4;
 const TILE_DEGREES = TILE_WIDTH;
-const TILE_VISIBILITY_RADIUS = 8;
+const TILE_VISIBILITY_RADIUS = 9;
 const CACHE_SPAWN_PROBABILITY = 0.1;
+const LOCAL_STORAGE_KEY = "GAME_STATE";
 
 // Create Board for Cells
 const board = new Board(TILE_WIDTH, TILE_VISIBILITY_RADIUS);
 
 // Create the map html element
 const map = leaflet.map(document.getElementById("map")!, {
-  center: OAKES_CLASSROOM,
+  center: PLAYER_ORIGIN,
   zoom: GAMEPLAY_ZOOM_LEVEL,
   minZoom: GAMEPLAY_ZOOM_LEVEL,
   maxZoom: GAMEPLAY_ZOOM_LEVEL,
@@ -47,18 +45,17 @@ const map = leaflet.map(document.getElementById("map")!, {
 });
 
 // Player variables
-let playerLocation: leaflet.latLng = OAKES_CLASSROOM;
-
+let playerLocation: leaflet.LatLng = PLAYER_ORIGIN;
 let playerInventory: Coin[] = [];
-let playerMoveHistory: leaflet.latLng[] = [];
+let playerMoveHistory: leaflet.LatLng[] = [];
 
-const playerPolyline: leaflet.polyline = leaflet.polyline([], {
+const playerPath: leaflet.Polyline = leaflet.polyline([], {
   color: "red",
   weight: 5,
   opacity: 0.3,
 });
 
-playerPolyline.addTo(map);
+playerPath.addTo(map);
 
 // Add a tile layer to the map
 leaflet
@@ -70,15 +67,15 @@ leaflet
   .addTo(map);
 
 // Add a player marker to the map
-const playerMarker = leaflet.marker(OAKES_CLASSROOM).addTo(map);
+const playerMarker = leaflet.marker(PLAYER_ORIGIN).addTo(map);
 playerMarker.bindPopup("Hello, fellow traveler!");
 
-// 🌐 Automatic position updating based on device's real-world location
+// 🌐 Automatic position updating based on device's real-world geolocation
 const geolocatorButton = document.querySelector<HTMLButtonElement>("#sensor")!;
 
 geolocatorButton.addEventListener("click", () => {
   // clear polyline and start drawing from new location
-  playerPolyline.setLatLngs([]);
+  playerPath.setLatLngs([]);
 
   // track changes in device's current location
   navigator.geolocation.watchPosition((position) => {
@@ -87,8 +84,7 @@ geolocatorButton.addEventListener("click", () => {
 
     // refresh map to account for new player location
     updatePlayerLocation(newLocation);
-    updatePlayerPolyLine(newLocation);
-
+    drawPlayerPath(newLocation);
     showNearbyCaches();
 
     saveGameState();
@@ -97,12 +93,41 @@ geolocatorButton.addEventListener("click", () => {
 
 // 🚮 Reset game state and return all coins to original caches
 const resetButton = document.querySelector<HTMLButtonElement>("#reset")!;
-
 resetButton.addEventListener("click", () => {
-  updatePlayerLocation(OAKES_CLASSROOM);
-  playerPolyline.setLatLngs([]);
-  playerMoveHistory = [];
+  const userInput = prompt(
+    "Are you sure you want to reset game? 'yes' or 'no'",
+  );
+
+  // reset game if user confirms
+  if (userInput?.toLocaleLowerCase() === "yes") {
+    resetGame();
+  }
 });
+
+function resetGame(): void {
+  updatePlayerLocation(PLAYER_ORIGIN);
+
+  // reset player path
+  playerMoveHistory = [];
+  playerPath.setLatLngs([]);
+  drawPlayerPath(PLAYER_ORIGIN); // add start position to player path history
+
+  // return all coins from player inventory back to original caches
+  playerInventory.forEach((coin) => {
+    const { i, j } = coin;
+    const originalCache = board.getCache(i, j);
+
+    originalCache?.coins.push(coin);
+    board.setCache(i, j, originalCache!);
+  });
+  playerInventory = [];
+
+  updateInventoryPanel();
+
+  // override local game data
+  localStorage.clear();
+  saveGameState();
+}
 
 // Initialize player movement buttons defined in index.html
 const directionConfigs: DirectionalButtonConfig[] = [
@@ -129,14 +154,13 @@ function movePlayer(deltaLat: number, delatLng: number): void {
 
   // refresh map to account for new player location
   updatePlayerLocation(newLocation);
-  updatePlayerPolyLine(newLocation);
-
+  drawPlayerPath(newLocation);
   showNearbyCaches();
 
   saveGameState();
 }
 
-function updatePlayerLocation(newLocation: leaflet.latLng): void {
+function updatePlayerLocation(newLocation: leaflet.LatLng): void {
   // update player location to new location
   playerLocation = newLocation;
 
@@ -145,27 +169,28 @@ function updatePlayerLocation(newLocation: leaflet.latLng): void {
   map.panTo(newLocation);
 }
 
-function updatePlayerPolyLine(newLocation: leaflet.latLng): void {
+function drawPlayerPath(newLocation: leaflet.LatLng): void {
   playerMoveHistory.push(newLocation); // log new coords in player's path
-  playerPolyline.addLatLng(newLocation); // add new point to polyline
+  playerPath.addLatLng(newLocation); // add new point to polyline
 }
 
-// update polyline with initial player location
-updatePlayerPolyLine(playerLocation);
+// Path drawn once at game start to account for player spawn
+drawPlayerPath(playerLocation);
 
-// display the player's coins
+// Display the player's coins on the inventory panel
 function updateInventoryPanel(): void {
   const inventoryPanel = document.querySelector<HTMLDivElement>(
     "#inventoryPanel",
   )!;
 
+  // display coins in [i:j:serial] format
   const coinList = playerInventory
     .map((coin) => `[${coin.toString()}]`)
     .join(", ");
   inventoryPanel.innerHTML = `${coinList || " "}`;
 }
 
-// Display the player's coins
+// Display the player's coins immediately at game start
 updateInventoryPanel();
 
 // Add caches to the map by cell numbers
@@ -173,28 +198,28 @@ function spawnCache(i: number, j: number): void {
   const cell: Cell = { i, j };
   const bounds = board.getCellBounds(cell);
 
-  // Instantiate the cache's coordinates and coins
+  // instantiate the cache's coordinates and coins
   const cache: Cache = new Cache(i, j);
   cache.setCoins(generateCoinsForCache(i, j));
 
-  // Save cache state on the board using Momento Pattern
+  // save cache state on the board using Momento Pattern
   board.setCache(i, j, cache);
 
-  // Add a rectangle to the map to represent the cache
+  // add a rectangle to the map to represent the cache
   const rect = leaflet.rectangle(bounds);
   rect.addTo(map);
 
-  // Create popup representing the cache
+  // create popup representing the cache
   rect.bindPopup(() => createCachePopup(cache));
 }
 
 // Populate caches with a random amount of coins
 function generateCoinsForCache(i: number, j: number): Coin[] {
-  // Compute pseudo-random amount (between 0 and 7) of coins per cache
+  // compute pseudo-random amount (between 0 and 7) of coins per cache
   const numCoins = Math.floor(luck([i, j, "coins"].toString()) * 8);
   const coins: Coin[] = [];
 
-  // Create list of coins in 'i:j#serial' format
+  // create list of coins in 'i:j#serial' format
   for (let n = 0; n < numCoins; n++) {
     const coin = new Coin(i, j, `${n}`);
     coins.push(coin);
@@ -222,7 +247,7 @@ function createCoinButton(cache: Cache, coin: Coin): HTMLDivElement {
   coinDiv.innerHTML =
     `Coin: [${coin.toString()}]<button id="collect-${coin.serial}">Collect</button>`;
 
-  // Add event listener to the new collect button
+  // add event listener to the new collect button
   coinDiv
     .querySelector<HTMLButtonElement>(`#collect-${coin.serial}`)!
     .addEventListener("click", () => {
@@ -246,7 +271,7 @@ function appendDepositButton(popupDiv: HTMLDivElement, cache: Cache): void {
   const depositButton = document.createElement("button");
   depositButton.innerHTML = "Deposit Coin";
 
-  // Add event listener to the new deposit button
+  // add event listener to the new deposit button
   depositButton.addEventListener("click", () => {
     depositCoin(cache, popupDiv);
     updateInventoryPanel();
@@ -290,14 +315,14 @@ function showNearbyCaches(): void {
   const visibleCells = board.getCellsNearPoint(playerLocation);
 
   visibleCells.forEach((cell) => {
-    // Restore cache based on saved state
+    // restore cache based on saved state
     const cache = board.getCache(cell.i, cell.j);
 
     if (cache) {
-      // Display regenerated cache's popup
+      // display regenerated cache's popup
       createCachePopup(cache);
     } else if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
-      // Create new cache based on global spawn rate
+      // create new cache based on global spawn rate
       spawnCache(cell.i, cell.j);
     }
   });
@@ -306,30 +331,47 @@ function showNearbyCaches(): void {
 // Display nearby cells once upon game start
 showNearbyCaches();
 
+// Local storage system inspired by Mako1688, https://github.com/Mako1688/cmpm-121-demo-3/blob/main/src/main.ts
 function saveGameState(): void {
   const gameState = {
     playerLocation,
     playerInventory,
     playerMoveHistory,
-    caches: board.getCacheStringify(),
+    caches: board.getCacheData(),
   };
 
-  console.log("game state saved");
-
-  localStorage.setItem("game_state", JSON.stringify(gameState));
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(gameState));
 }
 
-loadGameState();
-
 function loadGameState(): void {
-  const gameState = localStorage.getItem("game_state");
+  const gameState = localStorage.getItem(LOCAL_STORAGE_KEY);
 
   if (gameState) {
     const state = JSON.parse(gameState);
 
+    if (!state) return; // exit if no previous game state exists
+
+    // initialize game parameters from previous save
     playerLocation = state.playerLocation;
-    playerInventory = state.playerInventory;
     playerMoveHistory = state.playerMoveHistory;
     board.setCacheStates(state.caches);
+
+    // convert local storage data back to Coins
+    playerInventory = state.playerInventory.map(
+      (coinData: { i: number; j: number; serial: string }) =>
+        new Coin(coinData.i, coinData.j, coinData.serial),
+    );
+
+    // display player at previous saved state's location
+    updatePlayerLocation(playerLocation);
+    playerPath.setLatLngs(playerMoveHistory);
+    showNearbyCaches();
+
+    updateInventoryPanel();
   }
 }
+
+//localStorage.clear();
+
+// Called once at start to load previous game state if one exists
+loadGameState();

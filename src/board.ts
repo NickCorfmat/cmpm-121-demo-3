@@ -1,9 +1,8 @@
 import leaflet from "leaflet";
 
-// Class organization structure inspired by Mako1688,
-// https://github.com/Mako1688/cmpm-121-demo-3/blob/main/src/board.ts
-
 import { Cache } from "./cache.ts";
+
+// Class organization structure inspired by Mako1688, https://github.com/Mako1688/cmpm-121-demo-3/blob/main/src/board.ts
 
 // Interfaces
 export interface Cell {
@@ -85,7 +84,7 @@ export class Board {
   }
 
   // Code section inspired by Mako1688.
-  // I liked how they encapsulated the cache Momento pattern in board.ts -->
+  // I liked how they encapsulated the cache Momento pattern in board.ts
 
   // Save cache state on board as momento string
   setCache(i: number, j: number, cache: Cache): void {
@@ -109,7 +108,8 @@ export class Board {
     return null;
   }
 
-  getCacheStringify(): { key: string; momento: string }[] {
+  // Retrieve all cache states as one list
+  getCacheData(): { key: string; momento: string }[] {
     const cacheStrings: { key: string; momento: string }[] = [];
 
     this.cacheStates.forEach((key, momento) => {
@@ -119,6 +119,7 @@ export class Board {
     return cacheStrings;
   }
 
+  // Reinitialize board caches based on input list of cache states
   setCacheStates(caches: { key: string; momento: string }[]): void {
     caches.forEach(({ key, momento }) => {
       this.cacheStates.set(key, momento);
