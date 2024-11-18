@@ -371,7 +371,5 @@ function loadGameState(): void {
   }
 }
 
-//localStorage.clear();
-
 // Called once at start to load previous game state if one exists
 loadGameState();
