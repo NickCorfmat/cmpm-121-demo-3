@@ -15,7 +15,7 @@ export class GameState {
   }
 
   // Local storage system inspired by Mako1688, https://github.com/Mako1688/cmpm-121-demo-3/blob/main/src/main.ts
-  saveGameState(): void {
+  save(): void {
     const gameState = {
       player: this.player.toJSON(),
       caches: this.board.getCacheData(),
@@ -24,7 +24,7 @@ export class GameState {
     localStorage.setItem(this.localStorageKey, JSON.stringify(gameState));
   }
 
-  loadGameState(): void {
+  load(): void {
     const data = localStorage.getItem(this.localStorageKey);
 
     if (data) {
@@ -33,7 +33,7 @@ export class GameState {
       if (!gameState) return; // exit if no previous game state exists
 
       // initialize game parameters from previous save
-      this.player = gameState.player;
+      this.player.fromJSON(gameState.player);
       this.board.setCacheStates(gameState.caches);
 
       // convert local storage data back to Coins
@@ -44,8 +44,6 @@ export class GameState {
 
       // display player at previous saved state's location
       this.player.path.setLatLngs([]);
-      //showNearbyCaches();
-
       this.player.updateInventoryPanel();
     }
   }
@@ -61,10 +59,10 @@ export class GameState {
     });
 
     this.player.reset(initialLocation);
-    //player.updateInventoryPanel();
+    this.player.updateInventoryPanel();
 
     // override local game data
     localStorage.clear();
-    //saveGameState();
+    this.save();
   }
 }

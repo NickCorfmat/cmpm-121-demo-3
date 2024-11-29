@@ -50,16 +50,11 @@ leaflet
   })
   .addTo(map);
 
-// Add a player marker to the map
-const playerMarker = leaflet.marker(PLAYER_ORIGIN).addTo(map);
-playerMarker.bindPopup("Hello, fellow traveler!");
-
 // Set up core gameplay elements
-const player = new Player(PLAYER_ORIGIN);
+const player = new Player(PLAYER_ORIGIN, map);
 const board = new Board(TILE_WIDTH, TILE_VISIBILITY_RADIUS);
 const gameState = new GameState(player, board, LOCAL_STORAGE_KEY);
 
-player.path.addTo(map);
 player.updateInventoryPanel();
 showNearbyCaches();
 
@@ -128,7 +123,7 @@ function collectCoin(cache: Cache, coin: Coin, coinDiv: HTMLDivElement): void {
   // remove coin's collect button
   coinDiv.remove();
 
-  //saveGameState();
+  gameState.save();
 }
 
 function depositCoin(cache: Cache, popupDiv: HTMLDivElement): void {
@@ -144,7 +139,7 @@ function depositCoin(cache: Cache, popupDiv: HTMLDivElement): void {
     const coinDiv = createCoinButton(cache, depositedCoin);
     popupDiv.appendChild(coinDiv);
 
-    //saveGameState();
+    gameState.save();
   }
 }
 
@@ -172,12 +167,15 @@ function movePlayer(deltaLat: number, delatLng: number): void {
   );
 
   player.moveTo(newLocation, map);
-  playerMarker.setLatLng(newLocation);
 
   // refresh map to account for new player location
   showNearbyCaches();
 
-  //saveGameState();
+  gameState.save();
+
+  const key = "GAME_STATE"; // Replace with your key
+  const value = localStorage.getItem(key);
+  console.log(`${key}: ${value}`);
 }
 
 // Game Presentation
@@ -250,7 +248,7 @@ geolocatorButton.addEventListener("click", () => {
     player.moveTo(newLocation, map);
     showNearbyCaches();
 
-    //saveGameState();
+    gameState.save();
   });
 });
 
@@ -266,6 +264,3 @@ resetButton.addEventListener("click", () => {
     gameState.reset(PLAYER_ORIGIN);
   }
 });
-
-// // Called once at start to load previous game state if one exists
-// //loadGameState();
