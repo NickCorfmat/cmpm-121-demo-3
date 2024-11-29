@@ -188,7 +188,7 @@ function populatePopup(popupDiv: HTMLDivElement, cache: Cache): void {
     const coinDiv = createCoinButton(cache, coin);
     popupDiv.appendChild(coinDiv);
   });
-  
+
   // create deposit button
   const depositButton = document.createElement("button");
   depositButton.innerHTML = "Deposit Coin";
