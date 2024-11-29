@@ -68,16 +68,13 @@ function showNearbyCaches(): void {
     const cache = board.getCache(cell.i, cell.j);
 
     if (cache) {
-      // display regenerated cache's popup
       createCachePopup(cache);
     } else if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
-      // create new cache based on global spawn rate
       spawnCache(cell.i, cell.j);
     }
   });
 }
 
-// Add caches to the map by cell numbers
 function spawnCache(i: number, j: number): void {
   const cell: Cell = { i, j };
   const bounds = board.getCellBounds(cell);
@@ -93,11 +90,9 @@ function spawnCache(i: number, j: number): void {
   const rect = leaflet.rectangle(bounds);
   rect.addTo(map);
 
-  // create popup representing the cache
   rect.bindPopup(() => createCachePopup(cache));
 }
 
-// Populate caches with a random amount of coins
 function generateCoinsForCache(i: number, j: number): Coin[] {
   // compute pseudo-random amount (between 0 and 7) of coins per cache
   const numCoins = Math.floor(luck([i, j, "coins"].toString()) * 8);
@@ -113,16 +108,13 @@ function generateCoinsForCache(i: number, j: number): Coin[] {
 }
 
 function collectCoin(cache: Cache, coin: Coin, coinDiv: HTMLDivElement): void {
-  // transfer coin to inventory and remove from cache's coin list
   player.collectCoin(coin);
   cache.coins = cache.coins.filter((c) => c.serial !== coin.serial); // Source: Brace, "How to remove a specific item from a list"
 
   // update new cache state on board
   board.setCache(cache.i, cache.j, cache);
 
-  // remove coin's collect button
   coinDiv.remove();
-
   gameState.save();
 }
 
@@ -151,8 +143,7 @@ const directionConfigs: DirectionalButtonConfig[] = [
   { name: "east", vertical: 0, horizontal: 1 },
 ];
 
-// Create player movement button and attach event listener
-// Source: Original movement code by me, simplified with the help of Brace.
+// Source: directional movement code by me, simplified with the help of Brace.
 directionConfigs.forEach(({ name, vertical, horizontal }) => {
   const button = document.querySelector<HTMLButtonElement>(`#${name}`)!;
   button.addEventListener("click", () => {
@@ -168,14 +159,8 @@ function movePlayer(deltaLat: number, delatLng: number): void {
 
   player.moveTo(newLocation, map);
 
-  // refresh map to account for new player location
   showNearbyCaches();
-
   gameState.save();
-
-  const key = "GAME_STATE"; // Replace with your key
-  const value = localStorage.getItem(key);
-  console.log(`${key}: ${value}`);
 }
 
 // Game Presentation
@@ -187,21 +172,18 @@ function createCachePopup(cache: Cache): HTMLDivElement {
     <div><h3>Cache ${cache.i}, ${cache.j}</h3></div>
   `;
 
-  appendCollectButtons(cachePopupDiv, cache);
-  appendDepositButton(cachePopupDiv, cache);
+  populatePopup(cachePopupDiv, cache);
 
   return cachePopupDiv;
 }
 
-function appendCollectButtons(popupDiv: HTMLDivElement, cache: Cache): void {
+function populatePopup(popupDiv: HTMLDivElement, cache: Cache): void {
   // create a collect button for each coin in the cache
   cache.coins.forEach((coin) => {
     const coinDiv = createCoinButton(cache, coin);
     popupDiv.appendChild(coinDiv);
   });
-}
 
-function appendDepositButton(popupDiv: HTMLDivElement, cache: Cache): void {
   // create deposit button
   const depositButton = document.createElement("button");
   depositButton.innerHTML = "Deposit Coin";
