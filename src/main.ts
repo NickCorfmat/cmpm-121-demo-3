@@ -55,12 +55,14 @@ const player = new Player(PLAYER_ORIGIN, map);
 const board = new Board(TILE_WIDTH, TILE_VISIBILITY_RADIUS);
 const gameState = new GameState(player, board, LOCAL_STORAGE_KEY);
 
-gameState.load();
-
-player.updateInventoryPanel();
-showNearbyCaches();
+launchGame();
 
 // Game Logic
+
+function launchGame(): void {
+  gameState.load();
+  showNearbyCaches();
+}
 
 function showNearbyCaches(): void {
   const visibleCells = board.getCellsNearPoint(player.location);
@@ -116,8 +118,6 @@ function collectCoin(cache: Cache, coin: Coin, coinDiv: HTMLDivElement): void {
   // update new cache state on board
   board.setCache(cache.i, cache.j, cache);
 
-  player.updateInventoryPanel();
-
   coinDiv.remove();
   gameState.save();
 }
@@ -125,7 +125,7 @@ function collectCoin(cache: Cache, coin: Coin, coinDiv: HTMLDivElement): void {
 function depositCoin(cache: Cache, popupDiv: HTMLDivElement): void {
   if (player.inventory.length > 0) {
     // transfer coin from inventory to cache
-    const depositedCoin = player.inventory.pop()!;
+    const depositedCoin = player.depositCoin();
     cache.coins.push(depositedCoin);
 
     // update new cache state on board
@@ -135,7 +135,6 @@ function depositCoin(cache: Cache, popupDiv: HTMLDivElement): void {
     const coinDiv = createCoinButton(cache, depositedCoin);
     popupDiv.appendChild(coinDiv);
 
-    player.updateInventoryPanel();
     gameState.save();
   }
 }
@@ -162,7 +161,7 @@ function movePlayer(deltaLat: number, delatLng: number): void {
     player.location.lng + TILE_DEGREES * delatLng,
   );
 
-  player.moveTo(newLocation, map);
+  player.moveTo(newLocation);
 
   showNearbyCaches();
   gameState.save();
@@ -230,7 +229,7 @@ geolocatorButton.addEventListener("click", () => {
     const newLocation = leaflet.latLng(latitude, longitude);
 
     // refresh map to account for new player location
-    player.moveTo(newLocation, map);
+    player.moveTo(newLocation);
     showNearbyCaches();
 
     gameState.save();

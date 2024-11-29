@@ -1,7 +1,6 @@
 import leaflet from "leaflet";
 import { Player } from "./prefabs/player.ts";
 import { Board } from "./prefabs/board.ts";
-import { Coin } from "./prefabs/cache.ts";
 
 export class GameState {
   private player: Player;
@@ -29,21 +28,12 @@ export class GameState {
     if (data) {
       const gameState = JSON.parse(data);
 
-      if (!gameState) return; // exit if no previous game state exists
+      // exit if no previous game state exists
+      if (!gameState) return;
 
       // initialize game parameters from previous save
       this.player.fromJSON(gameState.player);
       this.board.setCacheStates(gameState.caches);
-
-      // convert local storage data back to Coins
-      this.player.inventory = gameState.playerInventory.map(
-        (coinData: { i: number; j: number; serial: string }) =>
-          new Coin(coinData.i, coinData.j, coinData.serial),
-      );
-
-      // display player at previous saved state's location
-      this.player.path.setLatLngs([]);
-      this.player.updateInventoryPanel();
     }
   }
 
@@ -58,10 +48,7 @@ export class GameState {
     });
 
     this.player.reset(initialLocation);
-    this.player.updateInventoryPanel();
 
-    // override local game data
     localStorage.clear();
-    this.save();
   }
 }
