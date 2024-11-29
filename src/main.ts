@@ -24,6 +24,7 @@ interface DirectionalButtonConfig {
 
 // Tunable gameplay parameters
 const PLAYER_ORIGIN = leaflet.latLng(36.98949379578401, -122.06277128548504); // Oakes classroom
+
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_WIDTH = 1e-4;
 const TILE_DEGREES = TILE_WIDTH;
@@ -187,7 +188,7 @@ function populatePopup(popupDiv: HTMLDivElement, cache: Cache): void {
     const coinDiv = createCoinButton(cache, coin);
     popupDiv.appendChild(coinDiv);
   });
-
+  
   // create deposit button
   const depositButton = document.createElement("button");
   depositButton.innerHTML = "Deposit Coin";
