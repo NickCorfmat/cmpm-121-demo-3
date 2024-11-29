@@ -6,26 +6,25 @@ import { Coin } from "./prefabs/cache.ts";
 export class GameState {
   private player: Player;
   private board: Board;
-  private localStorageKey: string;
+  private key: string;
 
-  constructor(player: Player, board: Board, localStorageKey: string) {
+  constructor(player: Player, board: Board, key: string) {
     this.player = player;
     this.board = board;
-    this.localStorageKey = localStorageKey;
+    this.key = key;
   }
 
-  // Local storage system inspired by Mako1688, https://github.com/Mako1688/cmpm-121-demo-3/blob/main/src/main.ts
   save(): void {
     const gameState = {
       player: this.player.toJSON(),
       caches: this.board.getCacheData(),
     };
 
-    localStorage.setItem(this.localStorageKey, JSON.stringify(gameState));
+    localStorage.setItem(this.key, JSON.stringify(gameState));
   }
 
   load(): void {
-    const data = localStorage.getItem(this.localStorageKey);
+    const data = localStorage.getItem(this.key);
 
     if (data) {
       const gameState = JSON.parse(data);

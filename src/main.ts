@@ -55,6 +55,8 @@ const player = new Player(PLAYER_ORIGIN, map);
 const board = new Board(TILE_WIDTH, TILE_VISIBILITY_RADIUS);
 const gameState = new GameState(player, board, LOCAL_STORAGE_KEY);
 
+gameState.load();
+
 player.updateInventoryPanel();
 showNearbyCaches();
 
@@ -114,6 +116,8 @@ function collectCoin(cache: Cache, coin: Coin, coinDiv: HTMLDivElement): void {
   // update new cache state on board
   board.setCache(cache.i, cache.j, cache);
 
+  player.updateInventoryPanel();
+
   coinDiv.remove();
   gameState.save();
 }
@@ -131,6 +135,7 @@ function depositCoin(cache: Cache, popupDiv: HTMLDivElement): void {
     const coinDiv = createCoinButton(cache, depositedCoin);
     popupDiv.appendChild(coinDiv);
 
+    player.updateInventoryPanel();
     gameState.save();
   }
 }
@@ -191,7 +196,6 @@ function populatePopup(popupDiv: HTMLDivElement, cache: Cache): void {
   // add event listener to the new deposit button
   depositButton.addEventListener("click", () => {
     depositCoin(cache, popupDiv);
-    player.updateInventoryPanel();
   });
 
   popupDiv.appendChild(depositButton);
@@ -208,7 +212,6 @@ function createCoinButton(cache: Cache, coin: Coin): HTMLDivElement {
     .querySelector<HTMLButtonElement>(`#collect-${coin.serial}`)!
     .addEventListener("click", () => {
       collectCoin(cache, coin, coinDiv);
-      player.updateInventoryPanel();
     });
 
   return coinDiv;

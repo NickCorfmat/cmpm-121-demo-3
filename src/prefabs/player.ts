@@ -1,3 +1,5 @@
+// Source: refactoring help from Brace, https://chat.brace.tools/c/f8bf5397-a95e-4590-9165-c4e542d62097
+
 import leaflet from "leaflet";
 import { Coin } from "./cache.ts";
 
